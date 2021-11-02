@@ -1,0 +1,42 @@
+name: Checkov
+
+on:
+  push:
+    branches:
+      - $default-branch
+    paths:
+      - '**.tf'
+  pull_request:
+    types: 
+      - synchronize
+    branches: 
+      - $default-branch
+    paths:
+      - '**.tf'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout repo
+        with:
+          # Clone with all history and all branches
+          fetch-depth: 0
+
+      - name: Set up python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10
+
+      - name: Generate Checkov report for upload to Datadog
+        run: |
+          pip install -U checkov
+          npm install -g @datadog/datadog-ci
+          checkov -d . -o junitxml -s > results.xml
+          DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }} datadog-ci junit upload --service ${GITHUB_REPOSITORY} results.xml
+      - name: Generate Checkov report for Github
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          quiet: true
